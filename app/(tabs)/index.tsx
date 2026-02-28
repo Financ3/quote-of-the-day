@@ -32,6 +32,8 @@ export default function HomeScreen() {
     setSaveResult(null);
     try {
       const result = await setWallpaper(captureRef);
+      console.log('Wallpaper result:', result);
+      
       setSaveResult(result.success ? 'success' : 'error');
       setTimeout(() => setSaveResult(null), 4000);
     } finally {
