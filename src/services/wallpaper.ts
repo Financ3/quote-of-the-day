@@ -35,12 +35,17 @@ export async function setWallpaper(
   }
 
   // 3. Save to media library (createAssetAsync returns the Asset object)
-  let asset: MediaLibrary.Asset;
+  // On iOS, createAssetAsync sometimes throws even though the photo is saved —
+  // known expo-media-library bug. Android needs the asset object for the
+  // content URI, so only treat the error as fatal there.
+  let asset: MediaLibrary.Asset | null = null;
   try {
     asset = await MediaLibrary.createAssetAsync(uri);
   } catch (err) {
-    console.error('saveToLibrary error:', err);
-    return { success: false, error: 'Failed to save image to Photos.' };
+    if (Platform.OS !== 'ios') {
+      console.error('saveToLibrary error:', err);
+      return { success: false, error: 'Failed to save image to Photos.' };
+    }
   }
 
   if (Platform.OS === 'ios') {
@@ -54,6 +59,9 @@ export async function setWallpaper(
   }
 
   // Android: launch system wallpaper chooser with content:// URI
+  if (!asset) {
+    return { success: false, error: 'Failed to save image to Photos.' };
+  }
   try {
     const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
     const contentUri = assetInfo.localUri ?? assetInfo.uri;
