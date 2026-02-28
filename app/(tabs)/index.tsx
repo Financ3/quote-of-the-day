@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,15 +9,15 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import QuoteCard from '../../src/components/QuoteCard';
-import { useSettings } from '../../src/hooks/useSettings';
-import { useQuote } from '../../src/hooks/useQuote';
-import { setWallpaper } from '../../src/services/wallpaper';
 import { THEMES } from '../../src/constants/themes';
+import { useQuote } from '../../src/hooks/useQuote';
+import { useSettings } from '../../src/hooks/useSettings';
+import { setWallpaper } from '../../src/services/wallpaper';
 
 export default function HomeScreen() {
   const captureRef = useRef<View | null>(null);
+  const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
   const { category, loaded: settingsLoaded } = useSettings();
@@ -25,7 +26,8 @@ export default function HomeScreen() {
   const theme = quote ? THEMES[quote.category] ?? THEMES.all : THEMES.all;
 
   async function handleSetWallpaper() {
-    if (!quote || saving) return;
+    if (!quote || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setSaveResult(null);
     try {
@@ -33,6 +35,7 @@ export default function HomeScreen() {
       setSaveResult(result.success ? 'success' : 'error');
       setTimeout(() => setSaveResult(null), 4000);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -103,17 +106,20 @@ export default function HomeScreen() {
             )}
           </Pressable>
 
-          {Platform.OS === 'ios' && (
-            <Text style={styles.iosHint}>
-              After saving, open Photos → tap the image → Share → Use as Wallpaper
+          <View style={styles.belowButton}>
+            {Platform.OS === 'ios' && (
+              <Text style={styles.iosHint}>
+                After saving, open Photos → tap the image → Share → Use as Wallpaper
+              </Text>
+            )}
+            <Text style={[
+              styles.saveMessage,
+              saveResult === 'success' ? styles.saveSuccess : styles.saveError,
+              { opacity: saveResult ? 1 : 0 },
+            ]}>
+              {saveResult === 'error' ? 'Could not save image. Please try again.' : 'Image saved to your photo library.'}
             </Text>
-          )}
-          {saveResult === 'success' && (
-            <Text style={styles.saveSuccess}>Image saved to your photo library.</Text>
-          )}
-          {saveResult === 'error' && (
-            <Text style={styles.saveError}>Could not save image. Please try again.</Text>
-          )}
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -207,23 +213,27 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
+  belowButton: {
+    alignItems: 'center',
+    gap: 6,
+  },
   iosHint: {
     color: '#666688',
     fontSize: 12,
     fontFamily: 'PlayfairDisplay_400Regular',
     textAlign: 'center',
     lineHeight: 18,
+    marginTop: 20,
+  },
+  saveMessage: {
+    fontSize: 13,
+    fontFamily: 'PlayfairDisplay_400Regular',
+    textAlign: 'center',
   },
   saveSuccess: {
     color: '#4caf82',
-    fontSize: 13,
-    fontFamily: 'PlayfairDisplay_400Regular',
-    textAlign: 'center',
   },
   saveError: {
     color: '#e07070',
-    fontSize: 13,
-    fontFamily: 'PlayfairDisplay_400Regular',
-    textAlign: 'center',
   },
 });
